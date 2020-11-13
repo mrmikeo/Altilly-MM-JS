@@ -16,7 +16,7 @@ chmod u+x ./install.sh
 
 **Parameters**
 
-`./binance_market_maker_js.sh` takes in 6 required arguments;
+`./altilly_market_maker_js.sh` takes in 6 required arguments;
 * `--apiKey=`: Your API Key
 * `--apiSecret=`: Your API Secret
 * `--spread=`: The spread percentage on the asset you would like to market make on
