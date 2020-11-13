@@ -1,19 +1,20 @@
 {
-  "name": "binancemarketmakerjs",
+  "name": "altillymarketmakerjs",
   "version": "1.0.0",
-  "description": "Market Making bot for binance",
+  "description": "Market Making bot for Altilly",
   "main": "./src/main.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node ./src/main.js"
   },
   "keywords": [
-    "Binance"
+    "Altilly"
   ],
-  "author": "Dylan Kerler",
+  "author": "Michael Osullivan",
   "license": "ISC",
   "dependencies": {
-    "binance-api-node": "^0.9.12",
-    "yargs": "^15.0.2"
+    "nodeAltillyApi": "https://github.com/altilly/nodealtillyapi",
+    "yargs": "^15.0.2",
+    "ws": "^7.1.1"
   }
 }

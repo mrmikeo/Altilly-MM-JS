@@ -1,17 +1,17 @@
-# Binance-Market-Maker-JS
-Market making bot for binance, written in JavaScript
+# Altilly-Market-Maker-JS
+Market making bot for Altilly, written in JavaScript
 
 **To Install:**
 ```
-git clone https://github.com/Dylan-Phoon/Binance-Market-Maker-JS
-cd Binance-Market-Maker-JS
+git clone https://github.com/mrmikeo/Altilly-Market-Maker-JS
+cd Altilly-Market-Maker-JS
 chmod u+x ./install.sh
 ./install.sh
 ```
 
 **Quick start:**
 ```
-./binance_market_maker_js.sh --apiKey=<your API Key> --apiSecret=<your API Secret> --spread=3 --exposure=2 --base=BTC --stock=ETH
+./altilly_market_maker_js.sh --apiKey=<your API Key> --apiSecret=<your API Secret> --spread=3 --exposure=2 --base=BTC --stock=ETH
 ```
 
 **Parameters**
