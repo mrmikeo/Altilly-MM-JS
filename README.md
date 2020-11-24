@@ -1,5 +1,11 @@
 # Altilly-Market-Maker-JS
-Market making bot for Altilly, written in JavaScript
+Market making bot for Altilly, written in JavaScript.  I use NodeJS v10 for this, but it will likely work fine on any version > 9
+
+**Install Nodejs v10**
+```
+curl -sL https://deb.nodesource.com/setup_10.x | sudo -E bash -
+apt-get install -y nodejs
+```
 
 **To Install:**
 ```
@@ -28,8 +34,8 @@ chmod u+x ./install.sh
 
 ### How it works
 
-The bot will maintain a spread of a given percentage in the order book, based on the last price traded.
-It will recalculate the spread and orders, when either your buy or sell maker order gets filled or partially filled.
+The bot will maintain a spread of a given percentage in the order book, based on the last price traded (or median price of best buy/sell if last price exceeds those boundaries).
+It will recalculate the spread and orders, when either your buy or sell maker order gets filled or partially filled, or if there is a disconnect between your bot and the Websockets API.
 
 For example given an order book that looks this;
 ```
