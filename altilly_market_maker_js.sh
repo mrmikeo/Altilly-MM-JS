@@ -4,6 +4,9 @@ apiSecret=
 spread=
 base=
 stock=
+baseexposure=
+stockexposure=
+pingpong=
 
 count=0
 for i in "$@"; do
@@ -17,14 +20,20 @@ for i in "$@"; do
 		--spread=*)	shift
 							spread="${i#*=}"
 							;;
-		--exposure=* | -e=*)	shift
-								exposure="${i#*=}"
-								;;
+		--baseexposure=* | -be=*)	shift
+							baseexposure="${i#*=}"
+							;;
+		--stockexposure=* | -be=*)	shift
+							stockexposure="${i#*=}"
+							;;
 		--base=* | -b=*)	shift
 							base="${i#*=}"
 							;;
 		--stock=* | -s=*) 	shift
 							stock="${i#*=}"
+							;;
+		--pingpong=*)		shift
+							pingpong="${i#*=}"
 							;;
 		*) echo "invalid option passed in: $1"
 			exit 1
@@ -37,7 +46,7 @@ if [ $count -lt 6 ]; then
 	exit 1
 fi
 
-node ./src/main.js --apiKey=$apiKey --apiSecret=$apiSecret --spread=$spread --base=$base --stock=$stock --exposure=$exposure
+node ./src/main.js --apiKey=$apiKey --apiSecret=$apiSecret --spread=$spread --base=$base --stock=$stock --baseexposure=$baseexposure --stockexposure=$stockexposure --pingpong=$pingpong
 
 
 

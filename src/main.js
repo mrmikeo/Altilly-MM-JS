@@ -1,18 +1,22 @@
-const altillyApi = require('nodeAltillyApi');
-const argv = require('yargs').argv
-const crypto = require('crypto');
-const WebSocket = require('ws');
-const { v4: uuidv4 } = require('uuid');
+const altillyApi 		= require('nodeAltillyApi');
+const argv 				= require('yargs').argv
+const crypto 			= require('crypto');
+const WebSocket 		= require('ws');
+const { v4: uuidv4 } 	= require('uuid');
+const Big 				= require('big.js');
+const { onShutdown } 	= require('node-graceful-shutdown');
 
-const ws = new WebSocket('wss://wsapi.altilly.com:2096');
+var ws = new WebSocket('wss://wsapi.altilly.com:2096');
 
 const opts = {
     apiKey: argv.apiKey,            /// API key
     apiSecret: argv.apiSecret,      /// API secret
     spread: argv.spread / 100,      /// Spread to maintain
-    exposure: argv.exposure / 100,  /// Amount of account to have exposed at a given time
+    baseexposure: argv.baseexposure / 100,  /// Amount of base account to have exposed at a given time
+    stockexposure: argv.stockexposure / 100,  /// Amount of stock account to have exposed at a given time
     base: argv.base,                /// Base asset to use e.g. BTC for BTCETH
-    stock: argv.stock               /// Stock to use e.g. ETH for BTCETH
+    stock: argv.stock,               /// Stock to use e.g. ETH for BTCETH
+    pingpong: argv.pingpong			/// 0 = place orders on both sides always, 1 = alternate buy and sell orders, 2 = double spread on last traded side
 }
 
 // Get the command line args and save into opts
@@ -30,9 +34,11 @@ console.log(
     `
         Running market maker with the following options;
         Spread: ${opts.spread}
-        Exposure: ${opts.exposure}
+        Base Exposure: ${opts.baseexposure}
+        Stock Exposure: ${opts.stockexposure}
         Base Asset: ${opts.base}
         Stock Asset: ${opts.stock}
+        Ping-Pong: ${opts.pingpong}
     `)
 
 const restapi = new altillyApi.default(opts.apiKey, opts.apiSecret);
@@ -42,6 +48,26 @@ restapi.cancelAllMarketOrders(opts.stock + opts.base);
 let lastPrice = 0;
 let is_initialised = false;
 let rebalancing = false;
+let lastTradeSide = null;
+
+// On Shutdown - Cancel open orders
+onShutdown("main", async function () {
+
+  return new Promise((resolve, reject) => {
+
+    (async () => {
+			
+      var apiresp = await restapi.cancelAllMarketOrders(opts.stock + opts.base);
+					
+      console.log('Cancel open orders');
+
+      resolve(apiresp);
+				
+    })();
+			
+  });
+	
+});
 
 ws.on('open', function open() {
 
@@ -55,6 +81,8 @@ ws.on('close', function close() {
   console.log('disconnected');
   
   restapi.cancelAllMarketOrders(opts.stock + opts.base);
+  
+  ws = new WebSocket('wss://wsapi.altilly.com:2096');
   
 });
 
@@ -76,31 +104,48 @@ ws.on('message', async function incoming(data) {
   {
 
     var data = JSON.parse(data);
-  
-    if (data.method == "ticker")
-    {
-  
-  	  lastPrice = parseFloat(data.params.last);
-
-      if (!is_initialised) {
-	    initialise();
-        is_initialised = true;
-      }
-  
-    }
-    else if (data.method == "report")
-    {
     
-      console.log(data);
+    if (data.params && data.params.symbol && data.params.symbol == opts.stock + opts.base)
+    {
   
-      if ((data.params.status === "partly filled" || data.params.status === "filled") && !rebalancing) { // Make sure we have async behaviour to avoid conflict
-        rebalancing = true;
-        await cancel_all();
-        await sleep(2000);
-        await recalculate_and_enter();
-        rebalancing = false;
+      if (data.method == "ticker")
+      { 
+    
+        if (Big(data.params.last).lt(data.params.bid) || Big(data.params.last).gt(data.params.ask))
+        {
+      
+          lastPrice = parseFloat(Big(data.params.bid).plus(data.params.ask).div(2).toFixed(10));
+      
+        }
+        else
+        {
+  
+  	  	  lastPrice = parseFloat(data.params.last);
+  	  	
+  	    }
+
+        if (!is_initialised) {
+	      initialise();
+          is_initialised = true;
+        }
+  
       }
+      else if (data.method == "report")
+      {
+    
+        console.log(data);
   
+        if ((data.params.status === "partly filled" || data.params.status === "filled") && !rebalancing) { // Make sure we have async behaviour to avoid conflict
+          rebalancing = true;
+          lastTradeSide = data.params.side;
+          await cancel_all();
+          await sleep(2000);
+          await recalculate_and_enter();
+          rebalancing = false;
+        }
+  
+      }
+    
     }
     
   }
@@ -136,7 +181,7 @@ async function cancel_all() {
 
 async function recalculate_and_enter() {
 
-    const account_info = await restapi.getTradingBalances();
+    let account_info = await restapi.getTradingBalances();
 
 	var balances = {};
 	for (let i = 0; i < account_info.length; i++)
@@ -148,14 +193,48 @@ async function recalculate_and_enter() {
 
 	}
 
-    const base_balance = parseFloat(balances[opts.base]);
-    const stock_balance = parseFloat(balances[opts.stock]);
+    let base_balance = parseFloat(balances[opts.base]);
+    let stock_balance = parseFloat(balances[opts.stock]);
 
-    const sell_price = (lastPrice + (lastPrice * (opts.spread / 2))).toFixed(8);
-    const buy_price = (lastPrice - (lastPrice * (opts.spread / 2))).toFixed(8);
+	let sell_price = null;
+	let buy_price = null;
+
+    if (opts.pingpong == 2)
+    {
     
-    const quantity_stock = (stock_balance * opts.exposure).toFixed(3);
-    const quantity_base = ((base_balance * opts.exposure)/buy_price).toFixed(3);
+      if (lastTradeSide == 'buy')
+      {
+
+        sell_price = (lastPrice + (lastPrice * (opts.spread / 2))).toFixed(10);
+        buy_price = (lastPrice - (lastPrice * (opts.spread))).toFixed(10);
+      
+      }
+      else if (lastTradeSide == 'sell')
+      {
+
+        sell_price = (lastPrice + (lastPrice * (opts.spread))).toFixed(10);
+        buy_price = (lastPrice - (lastPrice * (opts.spread / 2))).toFixed(10);
+      
+      }
+      else /// Null
+      {
+
+        sell_price = (lastPrice + (lastPrice * (opts.spread / 2))).toFixed(10);
+        buy_price = (lastPrice - (lastPrice * (opts.spread / 2))).toFixed(10);
+      
+      }
+    
+    }
+    else
+    {
+
+      sell_price = (lastPrice + (lastPrice * (opts.spread / 2))).toFixed(10);
+      buy_price = (lastPrice - (lastPrice * (opts.spread / 2))).toFixed(10);
+    
+    }
+
+    let quantity_stock = (stock_balance * opts.stockexposure).toFixed(3);
+    let quantity_base = ((base_balance * opts.baseexposure)/buy_price).toFixed(3);
 
     console.log(
         `
@@ -169,12 +248,42 @@ async function recalculate_and_enter() {
             Last Price: ${lastPrice} 
         `)
 
-    for (const side of ["buy", "sell"]) {
+    if (opts.pingpong == 1)
+    {
     
-    	var uuid = uuidv4();
+      if (lastTradeSide == 'sell' || lastTradeSide == null)
+      {
+
+    	let uuid = uuidv4();
+    	
+    	let side = 'buy';
+    	
+        await restapi.createOrder(uuid, opts.stock + opts.base, side, type = 'limit', timeInForce = 'GTC', side === "buy" ? quantity_base :  quantity_stock, side === "buy" ? buy_price : sell_price);
+      
+      }
+      else
+      {
+
+    	let uuid = uuidv4();
+    	
+    	let side = 'buy';
+    	
+        await restapi.createOrder(uuid, opts.stock + opts.base, side, type = 'limit', timeInForce = 'GTC', side === "buy" ? quantity_base :  quantity_stock, side === "buy" ? buy_price : sell_price);
+      
+      }
+    
+    }
+    else
+    {
+
+      for (const side of ["buy", "sell"]) {
+    
+    	let uuid = uuidv4();
     	
         await restapi.createOrder(uuid, opts.stock + opts.base, side, type = 'limit', timeInForce = 'GTC', side === "buy" ? quantity_base :  quantity_stock, side === "buy" ? buy_price : sell_price);
 
+      }
+    
     }
 
 }

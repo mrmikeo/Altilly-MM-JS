@@ -13,6 +13,8 @@
   "author": "Michael Osullivan",
   "license": "ISC",
   "dependencies": {
+    "big.js": "^6.0.2",
+    "node-graceful-shutdown": "^1.1.0",
     "nodeAltillyApi": "https://github.com/altilly/nodealtillyapi",
     "uuid": "^8.3.1",
     "uuidv4": "^6.2.5",
