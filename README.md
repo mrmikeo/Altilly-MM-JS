@@ -11,7 +11,7 @@ chmod u+x ./install.sh
 
 **Quick start:**
 ```
-./altilly_market_maker_js.sh --apiKey=<your API Key> --apiSecret=<your API Secret> --spread=3 --exposure=2 --base=BTC --stock=ETH
+./altilly_market_maker_js.sh --apiKey=<your API Key> --apiSecret=<your API Secret> --spread=3 --baseexposure=2 --stockexposure=2 --base=BTC --stock=ETH --pingpong=0
 ```
 
 **Parameters**
@@ -20,9 +20,11 @@ chmod u+x ./install.sh
 * `--apiKey=`: Your API Key
 * `--apiSecret=`: Your API Secret
 * `--spread=`: The spread percentage on the asset you would like to market make on
-* `--exposure= or -e=`: The maximum percentage of your account you want in the order book at any given time
+* `--baseexposure= or -be=`: The maximum percentage of your base account you want in the order book at any given time
+* `--stockexposure= or -se=`: The maximum percentage of your stock ccount you want in the order book at any given time
 * `--base= or -b=`: The base asset (e.g. in ETHBTC, BTC is the base asset)
 * `--stock= or -s=`: The stock asset (e.g. in ETHBTC, ETH is the stock asset)
+* `--pingpong=`: 0 = place orders on both sides always, 1 = alternate buy and sell orders, 2 = double spread on last traded side
 
 ### How it works
 
@@ -56,14 +58,14 @@ If someone then does a single market buy up to 17, b_1 will be canceled, s_1 wil
 
 ```
 
-The amount in each order is dependent on the `--exposure=` parameter. It will calculate the total {stock | base} balance * (exposure / 100).
+The amount in each order is dependent on the `--baseexposure=` && `--stockexposure=` parameters. It will calculate the total {stock | base} balance * (stockexposure | baseexposure / 100).
 For example;
 
 ```
-Exposure percentage (e) = 1
+Exposure percentage (be/se) = 1
 Base asset balance (b) = 10
 Stock asset balance (s) = 15
 
-buy order amount = b(10) * (e(1) / 100)
-sell order amount = s(15) * (e(1) / 100)  
+buy order amount = b(10) * (be(1) / 100)
+sell order amount = s(15) * (se(1) / 100)  
 ```
