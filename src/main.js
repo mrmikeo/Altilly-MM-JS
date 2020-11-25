@@ -6,7 +6,6 @@ const { v4: uuidv4 } 	= require('uuid');
 const Big 				= require('big.js');
 const { onShutdown } 	= require('node-graceful-shutdown');
 
-var ws = new WebSocket('wss://wsapi.altilly.com:2096');
 
 const opts = {
     apiKey: argv.apiKey,            /// API key
@@ -45,10 +44,12 @@ const restapi = new altillyApi.default(opts.apiKey, opts.apiSecret);
 
 restapi.cancelAllMarketOrders(opts.stock + opts.base);
 
-let lastPrice = 0;
-let is_initialised = false;
-let rebalancing = false;
-let lastTradeSide = null;
+var lastPrice = 0;
+var is_initialised = false;
+var rebalancing = false;
+var lastTradeSide = null;
+
+runIt();
 
 // On Shutdown - Cancel open orders
 onShutdown("main", async function () {
@@ -69,106 +70,116 @@ onShutdown("main", async function () {
 	
 });
 
-ws.on('open', function open() {
 
-  console.log('connected ws');
-  doSubscribe();
+function runIt()
+{
+
+	var ws = new WebSocket('wss://wsapi.altilly.com:2096');
+
+	ws.on('open', function open() {
+
+	  console.log('connected ws');
+	  doSubscribe(ws);
   
-});
+	});
 
-ws.on('close', function close() {
+	ws.on('close', function close() {
 
-  console.log('disconnected');
+	  console.log('disconnected');
   
-  restapi.cancelAllMarketOrders(opts.stock + opts.base);
+	  restapi.cancelAllMarketOrders(opts.stock + opts.base);
   
-  ws = new WebSocket('wss://wsapi.altilly.com:2096');
+	  setTimeout(function() {
+		runIt();
+	  },5000);
   
-});
+	});
 
-setInterval(function() {
+	setInterval(function() {
 
-	ws.ping();
+		ws.ping();
 
-},5000);
+	},5000);
 
-ws.on('pong', function() {
+	ws.on('pong', function() {
 
-	//console.log('pong');
+		//console.log('pong');
 
-});
+	});
 
-ws.on('message', async function incoming(data) {
+	ws.on('message', async function incoming(data) {
 
-  if (data !== undefined)
-  {
+	  if (data !== undefined)
+	  {
 
-    var data = JSON.parse(data);
-    
-    if (data.params && data.params.symbol && data.params.symbol == opts.stock + opts.base)
-    {
+		var data = JSON.parse(data);
+	
+		if (data.params && data.params.symbol && data.params.symbol == opts.stock + opts.base)
+		{
   
-      if (data.method == "ticker")
-      { 
-    
-        if (Big(data.params.last).lt(data.params.bid) || Big(data.params.last).gt(data.params.ask))
-        {
-      
-          lastPrice = parseFloat(Big(data.params.bid).plus(data.params.ask).div(2).toFixed(10));
-      
-        }
-        else
-        {
+		  if (data.method == "ticker")
+		  { 
+	
+			if (Big(data.params.last).lt(data.params.bid) || Big(data.params.last).gt(data.params.ask))
+			{
+	  
+			  lastPrice = parseFloat(Big(data.params.bid).plus(data.params.ask).div(2).toFixed(10));
+	  
+			}
+			else
+			{
   
-  	  	  lastPrice = parseFloat(data.params.last);
-  	  	
-  	    }
+			  lastPrice = parseFloat(data.params.last);
+		
+			}
 
-        if (!is_initialised) {
-	      initialise();
-          is_initialised = true;
-        }
+			if (!is_initialised) {
+			  initialise();
+			  is_initialised = true;
+			}
   
-      }
-      else if (data.method == "report")
-      {
-    
-        console.log(data);
+		  }
+		  else if (data.method == "report")
+		  {
+	
+			console.log(data);
   
-        if ((data.params.status === "partly filled" || data.params.status === "filled") && !rebalancing) { // Make sure we have async behaviour to avoid conflict
-          rebalancing = true;
-          lastTradeSide = data.params.side;
-          await cancel_all();
-          await sleep(2000);
-          await recalculate_and_enter();
-          rebalancing = false;
-        }
+			if ((data.params.status === "partly filled" || data.params.status === "filled") && !rebalancing) { // Make sure we have async behaviour to avoid conflict
+			  rebalancing = true;
+			  lastTradeSide = data.params.side;
+			  await cancel_all();
+			  await sleep(2000);
+			  await recalculate_and_enter();
+			  rebalancing = false;
+			}
   
-      }
-    
-    }
-    
-  }
+		  }
+	
+		}
+	
+	  }
   
-});
+	});
 
-function doSubscribe()
+}
+
+function doSubscribe(thisws)
 {
 
   console.log('Do Subsribe');
   
-  ws.send(JSON.stringify({"method": "login","params": {"algo": "BASIC","pKey": opts.apiKey,"sKey": opts.apiSecret}}));
+  thisws.send(JSON.stringify({"method": "login","params": {"algo": "BASIC","pKey": opts.apiKey,"sKey": opts.apiSecret}}));
 
   // Stream the current price
   // Save into a global variable
 
-  ws.send(JSON.stringify({"method":"subscribeTicker","params":{"symbol":opts.stock + opts.base}}));
+  thisws.send(JSON.stringify({"method":"subscribeTicker","params":{"symbol":opts.stock + opts.base}}));
 
   // Listen to our trades
   // If one of our buys gets filled, then cancel all orders 
   // and enter new orders with a recalculated spread
 
-  ws.send(JSON.stringify({"method":"subscribeReports","params":{}}));
+  thisws.send(JSON.stringify({"method":"subscribeReports","params":{}}));
   
 }
 
