@@ -89,6 +89,8 @@ function runIt()
   
 	  restapi.cancelAllMarketOrders(opts.stock + opts.base);
   
+  	  is_initialised = false;
+  	  
 	  setTimeout(function() {
 		runIt();
 	  },5000);
