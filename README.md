@@ -20,6 +20,11 @@ chmod u+x ./install.sh
 ./altilly_market_maker_js.sh --apiKey=<your API Key> --apiSecret=<your API Secret> --spread=3 --baseexposure=2 --stockexposure=2 --base=BTC --stock=ETH --pingpong=0
 ```
 
+A good place to run this is from a screen session:
+```
+screen -S MM_BTC_USDT
+```
+
 **Parameters**
 
 `./altilly_market_maker_js.sh` takes in 8 required arguments;
@@ -30,7 +35,12 @@ chmod u+x ./install.sh
 * `--stockexposure= or -se=`: The maximum percentage of your stock ccount you want in the order book at any given time
 * `--base= or -b=`: The base asset (e.g. in ETHBTC, BTC is the base asset)
 * `--stock= or -s=`: The stock asset (e.g. in ETHBTC, ETH is the stock asset)
-* `--pingpong=`: 0 = place orders on both sides always, 1 = alternate buy and sell orders, 2 = double spread on last traded side
+* `--pingpong=`: 
+	0 = place orders on both sides always
+	1 = alternate buy and sell orders (ie, when you sell, then the next order will be buy)
+	2 = double spread on last traded side (ie, when you sell, your next sell order will have 2x the spacing)
+* `--numorders=`: How many orders do you want to place on each side. They will spread evenly according to your spread settings and quantity is exposure divided by numorders
+
 
 ### How it works
 
