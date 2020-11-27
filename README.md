@@ -36,9 +36,9 @@ screen -S MM_BTC_USDT
 * `--base= or -b=`: The base asset (e.g. in ETHBTC, BTC is the base asset)
 * `--stock= or -s=`: The stock asset (e.g. in ETHBTC, ETH is the stock asset)
 * `--pingpong=`: 
-	0 = place orders on both sides always
-	1 = alternate buy and sell orders (ie, when you sell, then the next order will be buy)
-	2 = double spread on last traded side (ie, when you sell, your next sell order will have 2x the spacing)
+**	0 = place orders on both sides always**
+**	1 = alternate buy and sell orders (ie, when you sell, then the next order will be buy)**
+**	2 = double spread on last traded side (ie, when you sell, your next sell order will have 2x the spacing)**
 * `--numorders=`: How many orders do you want to place on each side. They will spread evenly according to your spread settings and quantity is exposure divided by numorders
 
 
