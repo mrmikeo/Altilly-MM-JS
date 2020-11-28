@@ -35,6 +35,9 @@ for i in "$@"; do
 		--pingpong=*)		shift
 							pingpong="${i#*=}"
 							;;
+		--numorders=*)		shift
+							numorders="${i#*=}"
+							;;
 		*) echo "invalid option passed in: $1"
 			exit 1
 	esac
@@ -46,7 +49,7 @@ if [ $count -lt 6 ]; then
 	exit 1
 fi
 
-node ./src/main.js --apiKey=$apiKey --apiSecret=$apiSecret --spread=$spread --base=$base --stock=$stock --baseexposure=$baseexposure --stockexposure=$stockexposure --pingpong=$pingpong
+node ./src/main.js --apiKey=$apiKey --apiSecret=$apiSecret --spread=$spread --base=$base --stock=$stock --baseexposure=$baseexposure --stockexposure=$stockexposure --pingpong=$pingpong --numorders=$numorders
 
 
 

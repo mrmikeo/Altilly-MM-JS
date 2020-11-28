@@ -8,14 +8,15 @@ const { onShutdown } 	= require('node-graceful-shutdown');
 
 
 const opts = {
-    apiKey: argv.apiKey,            /// API key
-    apiSecret: argv.apiSecret,      /// API secret
-    spread: argv.spread / 100,      /// Spread to maintain
+    apiKey: argv.apiKey,            	/// API key
+    apiSecret: argv.apiSecret,      	/// API secret
+    spread: argv.spread / 100,      	/// Spread to maintain
     baseexposure: argv.baseexposure / 100,  /// Amount of base account to have exposed at a given time
     stockexposure: argv.stockexposure / 100,  /// Amount of stock account to have exposed at a given time
-    base: argv.base,                /// Base asset to use e.g. BTC for BTCETH
-    stock: argv.stock,               /// Stock to use e.g. ETH for BTCETH
-    pingpong: argv.pingpong			/// 0 = place orders on both sides always, 1 = alternate buy and sell orders, 2 = double spread on last traded side
+    base: argv.base,                	/// Base asset to use e.g. BTC for BTCETH
+    stock: argv.stock,               	/// Stock to use e.g. ETH for BTCETH
+    pingpong: parseInt(argv.pingpong),			/// 0 = place orders on both sides always, 1 = alternate buy and sell orders, 2 = double spread on last traded side
+    numorders: parseInt(argv.numorders)	/// Number of orders per side
 }
 
 // Get the command line args and save into opts
@@ -38,6 +39,7 @@ console.log(
         Base Asset: ${opts.base}
         Stock Asset: ${opts.stock}
         Ping-Pong: ${opts.pingpong}
+        NumOrders: ${opts.numorders}
     `)
 
 const restapi = new altillyApi.default(opts.apiKey, opts.apiSecret);
@@ -125,8 +127,19 @@ function runIt()
 			if (Big(data.params.last).lt(data.params.bid) || Big(data.params.last).gt(data.params.ask))
 			{
 	  
-			  lastPrice = parseFloat(Big(data.params.bid).plus(data.params.ask).div(2).toFixed(10));
-	  
+	  		  if (data.params.bid > 0 && data.params.ask > 0)
+	  		  {
+			  	lastPrice = parseFloat(Big(data.params.bid).plus(data.params.ask).div(2).toFixed(10));
+			  }
+			  else if (data.params.bid > 0)
+			  {
+			  	lastPrice = parseFloat(data.params.bid);
+			  }
+			  else if (data.params.ask > 0)
+			  {
+			  	lastPrice = parseFloat(data.params.ask);
+			  }
+			  
 			}
 			else
 			{
@@ -246,8 +259,8 @@ async function recalculate_and_enter() {
     
     }
 
-    let quantity_stock = (stock_balance * opts.stockexposure).toFixed(3);
-    let quantity_base = ((base_balance * opts.baseexposure)/buy_price).toFixed(3);
+    let quantity_stock = (stock_balance * opts.stockexposure / opts.numorders).toFixed(3);
+    let quantity_base = ((base_balance * opts.baseexposure / opts.numorders)/buy_price).toFixed(3);
 
     console.log(
         `
@@ -259,6 +272,8 @@ async function recalculate_and_enter() {
             Sell price (${opts.base}): ${sell_price}
 
             Last Price: ${lastPrice} 
+            
+            Num Orders: ${opts.numorders} 
         `)
 
     if (opts.pingpong == 1)
@@ -266,23 +281,37 @@ async function recalculate_and_enter() {
     
       if (lastTradeSide == 'sell' || lastTradeSide == null)
       {
+      
+      	for (let i = 0; i < opts.numorders; i++)
+      	{
 
-    	let uuid = uuidv4();
+    		let uuid = uuidv4();
     	
-    	let side = 'buy';
+    		let side = 'buy';
     	
-        await restapi.createOrder(uuid, opts.stock + opts.base, side, type = 'limit', timeInForce = 'GTC', side === "buy" ? quantity_base :  quantity_stock, side === "buy" ? buy_price : sell_price);
+        	await restapi.createOrder(uuid, opts.stock + opts.base, side, type = 'limit', timeInForce = 'GTC', side === "buy" ? quantity_base :  quantity_stock, side === "buy" ? buy_price : sell_price);
+      
+      		buy_price = (parseFloat(buy_price) - (parseFloat(buy_price) * (opts.spread / 2))).toFixed(10);
+      
+      	}
       
       }
       else
       {
 
-    	let uuid = uuidv4();
+      	for (let i = 0; i < opts.numorders; i++)
+      	{
+      	
+    		let uuid = uuidv4();
     	
-    	let side = 'buy';
+    		let side = 'sell';
     	
-        await restapi.createOrder(uuid, opts.stock + opts.base, side, type = 'limit', timeInForce = 'GTC', side === "buy" ? quantity_base :  quantity_stock, side === "buy" ? buy_price : sell_price);
+        	await restapi.createOrder(uuid, opts.stock + opts.base, side, type = 'limit', timeInForce = 'GTC', side === "buy" ? quantity_base :  quantity_stock, side === "buy" ? buy_price : sell_price);
+
+			sell_price = (parseFloat(sell_price) + (parseFloat(sell_price) * (opts.spread / 2))).toFixed(10);
       
+      	}
+      	
       }
     
     }
@@ -290,11 +319,25 @@ async function recalculate_and_enter() {
     {
 
       for (const side of ["buy", "sell"]) {
-    
-    	let uuid = uuidv4();
-    	
-        await restapi.createOrder(uuid, opts.stock + opts.base, side, type = 'limit', timeInForce = 'GTC', side === "buy" ? quantity_base :  quantity_stock, side === "buy" ? buy_price : sell_price);
 
+      	for (let i = 0; i < opts.numorders; i++)
+      	{
+      	
+    		let uuid = uuidv4();
+    	
+        	await restapi.createOrder(uuid, opts.stock + opts.base, side, type = 'limit', timeInForce = 'GTC', side === "buy" ? quantity_base :  quantity_stock, side === "buy" ? buy_price : sell_price);
+
+			if (side == 'buy')
+			{
+				buy_price = (parseFloat(buy_price) - (parseFloat(buy_price) * (opts.spread / 2))).toFixed(10);
+			}
+			else
+			{
+				sell_price = (parseFloat(sell_price) + (parseFloat(sell_price) * (opts.spread / 2))).toFixed(10);
+			}
+			
+		}
+		
       }
     
     }
