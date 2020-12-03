@@ -6,6 +6,8 @@ base=
 stock=
 baseexposure=
 stockexposure=
+basemax=
+stockmax=
 pingpong=
 
 count=0
@@ -25,6 +27,12 @@ for i in "$@"; do
 							;;
 		--stockexposure=* | -be=*)	shift
 							stockexposure="${i#*=}"
+							;;
+		--basemax=* | -be=*)	shift
+							basemax="${i#*=}"
+							;;
+		--stockmax=* | -be=*)	shift
+							stockmax="${i#*=}"
 							;;
 		--base=* | -b=*)	shift
 							base="${i#*=}"
@@ -49,7 +57,7 @@ if [ $count -lt 6 ]; then
 	exit 1
 fi
 
-node ./src/main.js --apiKey=$apiKey --apiSecret=$apiSecret --spread=$spread --base=$base --stock=$stock --baseexposure=$baseexposure --stockexposure=$stockexposure --pingpong=$pingpong --numorders=$numorders
+node ./src/main.js --apiKey=$apiKey --apiSecret=$apiSecret --spread=$spread --base=$base --stock=$stock --baseexposure=$baseexposure --stockexposure=$stockexposure --basemax=$basemax --stockmax=$stockmax --pingpong=$pingpong --numorders=$numorders
 
 
 

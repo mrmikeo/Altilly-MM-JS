@@ -13,6 +13,8 @@ const opts = {
     spread: argv.spread / 100,      	/// Spread to maintain
     baseexposure: argv.baseexposure / 100,  /// Amount of base account to have exposed at a given time
     stockexposure: argv.stockexposure / 100,  /// Amount of stock account to have exposed at a given time
+    basemax: argv.basemax,                	/// Max Qty can use for base exposure
+    stockmax: argv.stockmax,               	/// Max Qty can use for stock exposre
     base: argv.base,                	/// Base asset to use e.g. BTC for BTCETH
     stock: argv.stock,               	/// Stock to use e.g. ETH for BTCETH
     pingpong: parseInt(argv.pingpong),			/// 0 = place orders on both sides always, 1 = alternate buy and sell orders, 2 = double spread on last traded side
@@ -36,6 +38,8 @@ console.log(
         Spread: ${opts.spread}
         Base Exposure: ${opts.baseexposure}
         Stock Exposure: ${opts.stockexposure}
+        Base Max: ${opts.basemax}
+        Stock Max: ${opts.stockmax}
         Base Asset: ${opts.base}
         Stock Asset: ${opts.stock}
         Ping-Pong: ${opts.pingpong}
@@ -261,6 +265,16 @@ async function recalculate_and_enter() {
 
     let quantity_stock = (stock_balance * opts.stockexposure / opts.numorders).toFixed(3);
     let quantity_base = ((base_balance * opts.baseexposure / opts.numorders)/buy_price).toFixed(3);
+    
+    if (stock_balance * opts.stockexposure > opts.stockmax)
+    {
+    	quantity_stock = (opts.stockmax / opts.numorders).toFixed(3);
+    }
+
+    if (base_balance * opts.baseexposure > opts.basemax)
+    {
+    	quantity_base = ((opts.basemax / opts.numorders)/buy_price).toFixed(3);
+    }
 
     console.log(
         `

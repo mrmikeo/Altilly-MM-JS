@@ -17,7 +17,7 @@ chmod u+x ./install.sh
 
 **Quick start:**
 ```
-./altilly_market_maker_js.sh --apiKey=<your API Key> --apiSecret=<your API Secret> --spread=3 --baseexposure=2 --stockexposure=2 --base=BTC --stock=ETH --pingpong=0 --numorders=1
+./altilly_market_maker_js.sh --apiKey=<your API Key> --apiSecret=<your API Secret> --spread=3 --baseexposure=2 --stockexposure=2 --basemax=0.01 --stockmax=1 --base=BTC --stock=ETH --pingpong=0 --numorders=1
 ```
 
 A good place to run this is from a screen session:
@@ -33,6 +33,8 @@ screen -S MM_BTC_USDT
 * `--spread=`: The spread percentage on the asset you would like to market make on
 * `--baseexposure= or -be=`: The maximum percentage of your base account you want in the order book at any given time
 * `--stockexposure= or -se=`: The maximum percentage of your stock ccount you want in the order book at any given time
+* `--basemax=`: The maximum quantity of base asset can use to restrict max exposure
+* `--stockmax=`: The maximum quantity of stock asset can use to restrict max exposure
 * `--base= or -b=`: The base asset (e.g. in ETHBTC, BTC is the base asset)
 * `--stock= or -s=`: The stock asset (e.g. in ETHBTC, ETH is the stock asset)
 * `--pingpong=`: \
