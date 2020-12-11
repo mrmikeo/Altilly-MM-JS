@@ -17,12 +17,12 @@ chmod u+x ./install.sh
 
 **Quick start:**
 ```
-./altilly_market_maker_js.sh --apiKey=<your API Key> --apiSecret=<your API Secret> --spread=3 --baseexposure=2 --stockexposure=2 --basemax=0.01 --stockmax=1 --base=BTC --stock=ETH --pingpong=0 --numorders=1
+./altilly_market_maker_js.sh --apiKey=<your API Key> --apiSecret=<your API Secret> --spread=3 --baseexposure=2 --stockexposure=2 --basemax=0.01 --stockmax=1 --base=BTC --stock=ETH --numorders=10
 ```
 
-A good place to run this is from a screen session:
+The program will run as a Daemon.   You can kill any running bots with this:
 ```
-screen -S MM_BTC_USDT
+sh killall.sh
 ```
 
 **Parameters**
@@ -37,44 +37,14 @@ screen -S MM_BTC_USDT
 * `--stockmax=`: The maximum quantity of stock asset can use to restrict max exposure
 * `--base= or -b=`: The base asset (e.g. in ETHBTC, BTC is the base asset)
 * `--stock= or -s=`: The stock asset (e.g. in ETHBTC, ETH is the stock asset)
-* `--pingpong=`: \
-0 = place orders on both sides always\
-1 = alternate buy and sell orders (ie, when you sell, then the next order will be buy)\
-2 = double spread on last traded side (ie, when you sell, your next sell order will have 2x the spacing)
 * `--numorders=`: How many orders do you want to place on each side. They will spread evenly according to your spread settings and quantity is exposure divided by numorders
 
 
 ### How it works
 
 The bot will maintain a spread of a given percentage in the order book, based on the last price traded (or median price of best buy/sell if last price exceeds those boundaries).
-It will recalculate the spread and orders, when either your buy or sell maker order gets filled or partially filled, or if there is a disconnect between your bot and the Websockets API.
-
-For example given an order book that looks this;
-```
-16.8	| -- (your order) (s_1)
-15.8	| -- sell orders
-15.7	|
-
-15.5 	| -- Last price traded
-
-14.5	| -- (your order) (b_1)
-14.124 	| -- buy orders 
-12.5	|
-
-``` 
-
-If someone then does a single market buy up to 17, b_1 will be canceled, s_1 will be filled, and the bot will then rebalance so that the new order book looks like this;
-
-```
-18.00	| -- (your new order) (s_2)
-
-17.00	| -- Last price traded
-
-16.00	| -- (your new order) (b_2)
-14.124 	| -- buy orders 
-12.5	|
-
-```
+If you sell, the bot will place a new buy order 5% below the sale price.
+If you buy, the bot will place a new sell order 5% above the sale price.
 
 The amount in each order is dependent on the `--baseexposure=` && `--stockexposure=` parameters. It will calculate the total {stock | base} balance * (stockexposure | baseexposure / 100).
 For example;
